@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<title>COLLAPSE: RELOADED</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100%;
+    background: #07090f;
+    color: white;
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "SF Pro Display",
+        "Segoe UI",
+        sans-serif;
+    overflow-x: hidden;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+}
+
+.game {
+    width: 100%;
+    max-width: 560px;
+    min-height: 100vh;
+    padding: 28px 16px 35px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.title {
+    margin-top: 6px;
+    text-align: center;
+    font-size: clamp(23px, 7vw, 34px);
+    font-weight: 900;
+    letter-spacing: 4px;
+}
+
+.subtitle {
+    margin-top: 3px;
+    color: #747b8d;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 4px;
+}
+
+.sound-button {
+    align-self: flex-end;
+    margin-top: -2px;
+    margin-bottom: 8px;
+    padding: 7px 10px;
+    border-radius: 10px;
+    border: 1px solid #2b3040;
+    background: #111621;
+    color: #cdd2df;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.stats {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: 18px 0 14px;
+}
+
+.stat {
+    min-height: 64px;
+    border: 1px solid #242a39;
+    border-radius: 14px;
+    background: #101520;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.stat-label {
+    color: #6d7485;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+}
+
+.stat-value {
+    margin-top: 4px;
+    font-size: 21px;
+    font-weight: 900;
+}
+
+#comboValue {
+    color: #ffd43b;
+}
+
+.board-shell {
+    width: 100%;
+    position: relative;
+    border: 2px solid #272d3d;
+    border-radius: 18px;
+    padding: 5px;
+    background: #0b0e16;
+    box-shadow:
+        0 0 0 1px rgba(255,255,255,0.015),
+        0 10px 30px rgba(0,0,0,.35);
+    transition: border-color .2s, box-shadow .2s;
+}
+
+.board-shell.warning {
+    border-color: #ff3157;
+    box-shadow:
+        0 0 15px rgba(255,49,87,.55),
+        0 0 35px rgba(255,49,87,.22);
+}
+
+.board {
+    width: 100%;
+    aspect-ratio: 8 / 12;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(12, 1fr);
+    gap: 2px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+}
+
+.cell {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+}
+
+.block {
+    position: absolute;
+    inset: 1px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: clamp(13px, 4vw, 21px);
+    cursor: pointer;
+    transition:
+        transform .12s ease,
+        opacity .12s ease,
+        filter .12s ease;
+    box-shadow:
+        inset 0 1px 1px rgba(255,255,255,.25),
+        inset 0 -4px 8px rgba(0,0,0,.12);
+}
+
+.block:active {
+    transform: scale(.90);
+}
+
+.block.pop {
+    animation: pop .22s ease forwards;
+}
+
+.block.spawn {
+    animation: spawn .18s ease-out;
+}
+
+.block.special {
+    box-shadow:
+        inset 0 1px 2px rgba(255,255,255,.55),
+        0 0 8px rgba(255,255,255,.18);
+}
+
+@keyframes pop {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    60% {
+        transform: scale(1.18);
+        opacity: .9;
+    }
+    100% {
+        transform: scale(0);
+        opacity: 0;
+    }
+}
+
+@keyframes spawn {
+    0% {
+        transform: translateY(-18px);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.red {
+    background: linear-gradient(145deg,#ff405c,#df2347);
+}
+
+.yellow {
+    background: linear-gradient(145deg,#ffe36a,#e9b92e);
+}
+
+.green {
+    background: linear-gradient(145deg,#4ade80,#20b865);
+}
+
+.blue {
+    background: linear-gradient(145deg,#4894ff,#286ed5);
+}
+
+.purple {
+    background: linear-gradient(145deg,#aa63f1,#8240d2);
+}
+
+.special-bomb {
+    background:
+        radial-gradient(circle at 50% 45%,
+        #ffea72 0%,
+        #ffb300 22%,
+        #ff6b00 55%,
+        #f02645 100%);
+    border: 2px solid #ffe76a;
+    color: white;
+    text-shadow: 0 1px 3px #5c1900;
+}
+
+.special-row {
+    background:
+        linear-gradient(135deg,
+        #fff08a 0%,
+        #ffb300 30%,
+        #ff5c35 70%,
+        #ff1744 100%);
+    border: 2px solid #ffe768;
+    color: white;
+    text-shadow: 0 1px 3px #761b00;
+}
+
+.special-color {
+    background:
+        conic-gradient(
+            #ff304f,
+            #ffd43b,
+            #45dc83,
+            #3d8bff,
+            #a45bea,
+            #ff304f
+        );
+    border: 2px solid white;
+    color: white;
+    text-shadow: 0 1px 3px #222;
+}
+
+.status {
+    min-height: 28px;
+    margin-top: 10px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 900;
+    letter-spacing: .3px;
+}
+
+.status.normal {
+    color: #c5cad5;
+}
+
+.status.good {
+    color: #ffd43b;
+}
+
+.status.warning {
+    color: #ff4567;
+}
+
+.controls {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 3px;
+}
+
+button {
+    border: none;
+    font: inherit;
+}
+
+.control {
+    min-height: 52px;
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 1px;
+}
+
+.restart {
+    background: #202634;
+    color: white;
+}
+
+.pause {
+    background: white;
+    color: #111;
+}
+
+.restart:active,
+.pause:active,
+.sound-button:active {
+    transform: scale(.97);
+}
+
+.legend {
+    margin-top: 10px;
+    display: flex;
+    gap: 13px;
+    justify-content: center;
+    color: #747b8d;
+    font-size: 9px;
+    font-weight: 800;
+}
+
+.game-over {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    border-radius: 16px;
+    background: rgba(5,7,12,.92);
+    backdrop-filter: blur(8px);
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.game-over.show {
+    display: flex;
+}
+
+.game-over h2 {
+    margin: 0;
+    color: #ff3d62;
+    font-size: 28px;
+    letter-spacing: 3px;
+}
+
+.game-over p {
+    margin: 9px 0 18px;
+    color: #aab0bd;
+    font-size: 13px;
+}
+
+.final-score {
+    font-size: 40px;
+    font-weight: 900;
+    margin-bottom: 20px;
+}
+
+.retry {
+    min-width: 150px;
+    padding: 13px 18px;
+    border-radius: 13px;
+    background: white;
+    color: #111;
+    font-weight: 900;
+}
+
+.flash {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: white;
+    opacity: 0;
+    z-index: 100;
+}
+
+.flash.active {
+    animation: flash .18s ease;
+}
+
+@keyframes flash {
+    0% { opacity: 0; }
+    35% { opacity: .12; }
+    100% { opacity: 0; }
+}
+
+@media (max-height: 720px) {
+    .game {
+        padding-top: 15px;
+    }
+
+    .stats {
+        margin-top: 10px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="game">
+
+    <div class="title">COLLAPSE: RELOADED</div>
+    <div class="subtitle">TAP • COLLAPSE • DOMINATE</div>
+
+    <button class="sound-button" id="soundButton">
+        🔊 SOUND ON
+    </button>
+
+    <div class="stats">
+        <div class="stat">
+            <div class="stat-label">SCORE</div>
+            <div class="stat-value" id="scoreValue">0</div>
+        </div>
+
+        <div class="stat">
+            <div class="stat-label">COMBO</div>
+            <div class="stat-value" id="comboValue">0</div>
+        </div>
+
+        <div class="stat">
+            <div class="stat-label">BEST</div>
+            <div class="stat-value" id="bestValue">0</div>
+        </div>
+    </div>
+
+    <div class="board-shell" id="boardShell">
+
+        <div class="board" id="board"></div>
+
+        <div class="game-over" id="gameOver">
+            <h2>GAME OVER</h2>
+            <p>THE STACK REACHED THE TOP</p>
+
+            <div class="final-score" id="finalScore">
+                0
+            </div>
+
+            <button class="retry" id="retryButton">
+                PLAY AGAIN
+            </button>
+        </div>
+
+    </div>
+
+    <div class="status normal" id="status">
+        Tap groups of 2 or more matching blocks!
+    </div>
+
+    <div class="controls">
+        <button class="control restart" id="restartButton">
+            ↻ RESTART
+        </button>
+
+        <button class="control pause" id="pauseButton">
+            II PAUSE
+        </button>
+    </div>
+
+    <div class="legend">
+        <span>💣 BOMB</span>
+        <span>⚡ ROW</span>
+        <span>🌈 COLOR</span>
+    </div>
+
+</div>
+
+<div class="flash" id="flash"></div>
+
+<script>
+/* =========================================================
+   COLLAPSE: RELOADED
+   Full game engine
+   ========================================================= */
+
+const COLS = 8;
+const ROWS = 12;
+
+const COLORS = [
+    "red",
+    "yellow",
+    "green",
+    "blue",
+    "purple"
+];
+
+const boardEl = document.getElementById("board");
+const boardShell = document.getElementById("boardShell");
+
+const scoreEl = document.getElementById("scoreValue");
+const comboEl = document.getElementById("comboValue");
+const bestEl = document.getElementById("bestValue");
+
+const statusEl = document.getElementById("status");
+
+const restartButton = document.getElementById("restartButton");
+const pauseButton = document.getElementById("pauseButton");
+const soundButton = document.getElementById("soundButton");
+
+const gameOverEl = document.getElementById("gameOver");
+const finalScoreEl = document.getElementById("finalScore");
+const retryButton = document.getElementById("retryButton");
+
+const flashEl = document.getElementById("flash");
+
+let grid = [];
+let score = 0;
+let combo = 0;
+let best = Number(localStorage.getItem("collapseReloadedBest") || 0);
+
+let paused = false;
+let gameOver = false;
+
+let riseTimer = null;
+let comboTimer = null;
+
+let soundOn = true;
+
+let audioContext = null;
+
+
+/* =========================================================
+   AUDIO
+   ========================================================= */
+
+function initAudio() {
+    if (!audioContext) {
+        const AudioCtx =
+            window.AudioContext ||
+            window.webkitAudioContext;
+
+        if (AudioCtx) {
+            audioContext = new AudioCtx();
+        }
+    }
+
+    if (
+        audioContext &&
+        audioContext.state === "suspended"
+    ) {
+        audioContext.resume();
+    }
+}
+
+function beep(
+    frequency = 440,
+    duration = 0.07,
+    type = "sine",
+    volume = 0.035
+) {
+    if (!soundOn) return;
+
+    initAudio();
+
+    if (!audioContext) return;
+
+    const oscillator =
+        audioContext.createOscillator();
+
+    const gain =
+        audioContext.createGain();
+
+    oscillator.type = type;
+    oscillator.frequency.value = frequency;
+
+    gain.gain.setValueAtTime(
+        volume,
+        audioContext.currentTime
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+        0.001,
+        audioContext.currentTime + duration
+    );
+
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+
+    oscillator.start();
+    oscillator.stop(
+        audioContext.currentTime + duration
+    );
+}
+
+function playCollapseSound(size) {
+    const base = 300 + Math.min(size, 12) * 25;
+
+    beep(base, .06, "square", .025);
+
+    setTimeout(() => {
+        beep(base * 1.25, .07, "triangle", .02);
+    }, 35);
+}
+
+function playSpecialSound(type) {
+    if (type === "bomb") {
+        beep(110, .15, "sawtooth", .05);
+
+        setTimeout(() => {
+            beep(70, .22, "square", .035);
+        }, 60);
+    }
+
+    if (type === "row") {
+        beep(600, .08, "square", .035);
+        setTimeout(() => beep(900, .1, "square", .025), 70);
+    }
+
+    if (type === "color") {
+        beep(500, .08, "sine", .035);
+        setTimeout(() => beep(750, .08, "sine", .03), 70);
+        setTimeout(() => beep(1000, .12, "sine", .025), 140);
+    }
+}
+
+
+/* =========================================================
+   VIBRATION
+   ========================================================= */
+
+function vibrate(pattern) {
+    if (
+        typeof navigator !== "undefined" &&
+        "vibrate" in navigator
+    ) {
+        try {
+            navigator.vibrate(pattern);
+        } catch (e) {}
+    }
+}
+
+
+/* =========================================================
+   RANDOM HELPERS
+   ========================================================= */
+
+function randomColor() {
+    return COLORS[
+        Math.floor(Math.random() * COLORS.length)
+    ];
+}
+
+function randomSpecial() {
+
+    const roll = Math.random();
+
+    /*
+       Special blocks become more common
+       as the score increases.
+    */
+
+    const difficulty =
+        Math.min(score / 30000, 0.08);
+
+    if (roll < 0.012 + difficulty) {
+        return "bomb";
+    }
+
+    if (roll < 0.026 + difficulty) {
+        return "row";
+    }
+
+    if (roll < 0.038 + difficulty) {
+        return "color";
+    }
+
+    return null;
+}
+
+
+/* =========================================================
+   CREATE BOARD
+   ========================================================= */
+
+function createEmptyGrid() {
+
+    grid = [];
+
+    for (let r = 0; r < ROWS; r++) {
+
+        const row = [];
+
+        for (let c = 0; c < COLS; c++) {
+            row.push(null);
+        }
+
+        grid.push(row);
+    }
+}
+
+function createBlock() {
+
+    return {
+        color: randomColor(),
+        special: randomSpecial()
+    };
+}
+
+function fillInitialBoard() {
+
+    /*
+       Start with a playable board.
+       Keep some empty space toward the top.
+    */
+
+    for (let r = 4; r < ROWS; r++) {
+
+        for (let c = 0; c < COLS; c++) {
+
+            grid[r][c] = createBlock();
+        }
+    }
+
+    /*
+       Guarantee a few groups.
+    */
+
+    grid[ROWS - 1][0] =
+        grid[ROWS - 1][1] =
+        {
+            color: "red",
+            special: null
+        };
+
+    grid[ROWS - 2][3] =
+        grid[ROWS - 2][4] =
+        {
+            color: "blue",
+            special: null
+        };
+}
+
+
+/* =========================================================
+   RENDER
+   ========================================================= */
+
+function render() {
+
+    boardEl.innerHTML = "";
+
+    for (let r = 0; r < ROWS; r++) {
+
+        for (let c = 0; c < COLS; c++) {
+
+            const cell =
+                document.createElement("div");
+
+            cell.className = "cell";
+
+            const block = grid[r][c];
+
+            if (block) {
+
+                const el =
+                    document.createElement("div");
+
+                el.className =
+                    "block " +
+                    (block.special
+                        ? "special "
+                        : "") +
+                    (
+                        block.special === "bomb"
+                            ? "special-bomb"
+                            : block.special === "row"
+                                ? "special-row"
+                                : block.special === "color"
+                                    ? "special-color"
+                                    : block.color
+                    );
+
+                if (block.special === "bomb") {
+                    el.textContent = "💣";
+                }
+
+                if (block.special === "row") {
+                    el.textContent = "⚡";
+                }
+
+                if (block.special === "color") {
+                    el.textContent = "🌈";
+                }
+
+                el.dataset.row = r;
+                el.dataset.col = c;
+
+                el.addEventListener(
+                    "pointerdown",
+                    handleBlockTap
+                );
+
+                cell.appendChild(el);
+            }
+
+            boardEl.appendChild(cell);
+        }
+    }
+}
+
+
+/* =========================================================
+   FIND MATCHING GROUP
+   ========================================================= */
+
+function getGroup(row, col) {
+
+    const start = grid[row][col];
+
+    if (!start) return [];
+
+    /*
+       Special blocks activate immediately.
+    */
+
+    if (start.special) {
+        return [[row, col]];
+    }
+
+    const visited = new Set();
+
+    const queue = [[row, col]];
+
+    const group = [];
+
+    const key =
+        (r, c) => `${r}:${c}`;
+
+    visited.add(key(row, col));
+
+    while (queue.length) {
+
+        const [r, c] = queue.shift();
+
+        group.push([r, c]);
+
+        const neighbors = [
+            [r - 1, c],
+            [r + 1, c],
+            [r, c - 1],
+            [r, c + 1]
+        ];
+
+        for (const [nr, nc] of neighbors) {
+
+            if (
+                nr < 0 ||
+                nr >= ROWS ||
+                nc < 0 ||
+                nc >= COLS
+            ) {
+                continue;
+            }
+
+            if (!grid[nr][nc]) continue;
+
+            if (grid[nr][nc].special) continue;
+
+            if (
+                grid[nr][nc].color !== start.color
+            ) {
+                continue;
+            }
+
+            const k = key(nr, nc);
+
+            if (visited.has(k)) continue;
+
+            visited.add(k);
+            queue.push([nr, nc]);
+        }
+    }
+
+    return group;
+}
+
+
+/* =========================================================
+   SPECIAL ACTIVATION
+   ========================================================= */
+
+function activateSpecial(row, col) {
+
+    const block = grid[row][col];
+
+    if (!block || !block.special) {
+        return [];
+    }
+
+    const cells = [];
+
+    if (block.special === "bomb") {
+
+        for (let r = row - 1; r <= row + 1; r++) {
+
+            for (let c = col - 1; c <= col + 1; c++) {
+
+                if (
+                    r >= 0 &&
+                    r < ROWS &&
+                    c >= 0 &&
+                    c < COLS
+                ) {
+                    cells.push([r, c]);
+                }
+            }
+        }
+
+        statusEl.textContent =
+            "💣 BOMB! 3×3 CLEAR!";
+
+        playSpecialSound("bomb");
+        vibrate([45, 25, 80]);
+    }
+
+    if (block.special === "row") {
+
+        for (let c = 0; c < COLS; c++) {
+            cells.push([row, c]);
+        }
+
+        statusEl.textContent =
+            "⚡ ROW BLAST!";
+
+        playSpecialSound("row");
+        vibrate([35, 20, 55]);
+    }
+
+    if (block.special === "color") {
+
+        const color =
+            randomColor();
+
+        for (let r = 0; r < ROWS; r++) {
+
+            for (let c = 0; c < COLS; c++) {
+
+                if (
+                    grid[r][c] &&
+                    grid[r][c].color === color
+                ) {
+                    cells.push([r, c]);
+                }
+            }
+        }
+
+        statusEl.textContent =
+            "🌈 COLOR WIPE!";
+
+        playSpecialSound("color");
+        vibrate([30, 20, 30, 20, 80]);
+    }
+
+    return cells;
+}
+
+
+/* =========================================================
+   REMOVE CELLS
+   ========================================================= */
+
+function removeCells(cells) {
+
+    const unique = new Map();
+
+    for (const [r, c] of cells) {
+        unique.set(`${r}:${c}`, [r, c]);
+    }
+
+    const finalCells =
+        [...unique.values()];
+
+    /*
+       Visual pop.
+    */
+
+    finalCells.forEach(([r, c]) => {
+
+        const index =
+            r * COLS + c;
+
+        const el =
+            boardEl.children[index]?.firstChild;
+
+        if (el) {
+            el.classList.add("pop");
+        }
+    });
+
+    setTimeout(() => {
+
+        for (const [r, c] of finalCells) {
+            grid[r][c] = null;
+        }
+
+        applyGravity();
+        render();
+
+    }, 130);
+
+    return finalCells.length;
+}
+
+
+/* =========================================================
+   GRAVITY
+   ========================================================= */
+
+function applyGravity() {
+
+    /*
+       Blocks fall vertically.
+    */
+
+    for (let c = 0; c < COLS; c++) {
+
+        let writeRow = ROWS - 1;
+
+        for (
+            let r = ROWS - 1;
+            r >= 0;
+            r--
+        ) {
+
+            if (grid[r][c]) {
+
+                grid[writeRow][c] =
+                    grid[r][c];
+
+                if (writeRow !== r) {
+                    grid[r][c] = null;
+                }
+
+                writeRow--;
+            }
+        }
+
+        while (writeRow >= 0) {
+            grid[writeRow][c] = null;
+            writeRow--;
+        }
+    }
+
+    /*
+       Then columns shift left if empty.
+    */
+
+    let writeCol = 0;
+
+    for (let c = 0; c < COLS; c++) {
+
+        let hasBlock = false;
+
+        for (let r = 0; r < ROWS; r++) {
+
+            if (grid[r][c]) {
+                hasBlock = true;
+                break;
+            }
+        }
+
+        if (hasBlock) {
+
+            if (writeCol !== c) {
+
+                for (let r = 0; r < ROWS; r++) {
+
+                    grid[r][writeCol] =
+                        grid[r][c];
+
+                    grid[r][c] = null;
+                }
+            }
+
+            writeCol++;
+        }
+    }
+}
+
+
+/* =========================================================
+   ADD NEW ROW
+   ========================================================= */
+
+function addRow() {
+
+    if (paused || gameOver) return;
+
+    /*
+       If top row contains blocks,
+       the new row means GAME OVER.
+    */
+
+    for (let c = 0; c < COLS; c++) {
+
+        if (grid[0][c]) {
+            endGame();
+            return;
+        }
+    }
+
+    /*
+       Shift everything upward.
+    */
+
+    for (let r = 0; r < ROWS - 1; r++) {
+
+        for (let c = 0; c < COLS; c++) {
+
+            grid[r][c] =
+                grid[r + 1][c];
+        }
+    }
+
+    /*
+       New row enters at bottom.
+    */
+
+    for (let c = 0; c < COLS; c++) {
+
+        grid[ROWS - 1][c] =
+            createBlock();
+    }
+
+    render();
+
+    statusEl.textContent =
+        "⬆️ NEW ROW!";
+
+    statusEl.className =
+        "status normal";
+
+    vibrate(18);
+
+    /*
+       Check for danger.
+    */
+
+    updateDanger();
+}
+
+
+/* =========================================================
+   TAP LOGIC
+   ========================================================= */
+
+function handleBlockTap(event) {
+
+    if (paused || gameOver) return;
+
+    initAudio();
+
+    const row =
+        Number(event.currentTarget.dataset.row);
+
+    const col =
+        Number(event.currentTarget.dataset.col);
+
+    const block =
+        grid[row][col];
+
+    if (!block) return;
+
+    /*
+       SPECIAL
+    */
+
+    if (block.special) {
+
+        const cells =
+            activateSpecial(row, col);
+
+        const removed =
+            removeCells(cells);
+
+        addScore(
+            removed,
+            true
+        );
+
+        return;
+    }
+
+    /*
+       NORMAL GROUP
+    */
+
+    const group =
+        getGroup(row, col);
+
+    if (group.length < 2) {
+
+        /*
+           Small penalty feedback.
+        */
+
+        vibrate(8);
+        beep(170, .04, "sine", .018);
+
+        combo = 0;
+        updateUI();
+
+        statusEl.textContent =
+            "Need 2+ matching blocks";
+
+        statusEl.className =
+            "status normal";
+
+        return;
+    }
+
+    const removed =
+        removeCells(group);
+
+    addScore(
+        removed,
+        false
+    );
+
+    playCollapseSound(removed);
+
+    vibrate(
+        Math.min(
+            20 + removed * 7,
+            90
+        )
+    );
+}
+
+
+/* =========================================================
+   SCORING
+   ========================================================= */
+
+function addScore(amount, special) {
+
+    if (comboTimer) {
+        clearTimeout(comboTimer);
+    }
+
+    combo++;
+
+    /*
+       Base score:
+       larger groups are worth dramatically more.
+    */
+
+    let points =
+        amount * amount * 10;
+
+    /*
+       Combo multiplier.
+    */
+
+    const multiplier =
+        1 + Math.min(combo - 1, 9) * 0.25;
+
+    points =
+        Math.floor(
+            points * multiplier
+        );
+
+    /*
+       Special bonus.
+    */
+
+    if (special) {
+        points *= 2;
+    }
+
+    /*
+       Speed bonus.
+    */
+
+    points +=
+        Math.floor(score / 1000) * amount;
+
+    score += points;
+
+    if (score > best) {
+        best = score;
+
+        localStorage.setItem(
+            "collapseReloadedBest",
+            best
+        );
+    }
+
+    statusEl.textContent =
+        special
+            ? `💥 SPECIAL! +${points.toLocaleString()}`
+            : `💥 ${amount} BLOCKS! +${points.toLocaleString()} POINTS`;
+
+    if (combo >= 2) {
+
+        statusEl.textContent +=
+            ` • 🔥 ${combo}x COMBO`;
+
+        statusEl.className =
+            "status good";
+
+        beep(
+            500 + combo * 40,
+            .08,
+            "triangle",
+            .025
+        );
+    } else {
+
+        statusEl.className =
+            "status good";
+    }
+
+    updateUI();
+
+    comboTimer =
+        setTimeout(() => {
+
+            combo = 0;
+
+            updateUI();
+
+        }, 1800);
+
+    updateDanger();
+}
+
+
+/* =========================================================
+   DANGER
+   ========================================================= */
+
+function getHighestOccupiedRow() {
+
+    for (let r = 0; r < ROWS; r++) {
+
+        for (let c = 0; c < COLS; c++) {
+
+            if (grid[r][c]) {
+                return r;
+            }
+        }
+    }
+
+    return ROWS;
+}
+
+function updateDanger() {
+
+    const highest =
+        getHighestOccupiedRow();
+
+    const dangerRows = 2;
+
+    if (highest <= dangerRows) {
+
+        boardShell.classList.add("warning");
+
+        statusEl.textContent =
+            "🚨 CRITICAL! CLEAR THE TOP!";
+
+        statusEl.className =
+            "status warning";
+
+    } else {
+
+        boardShell.classList.remove("warning");
+    }
+}
+
+
+/* =========================================================
+   AUTOMATIC RISING
+   ========================================================= */
+
+function getRiseSpeed() {
+
+    /*
+       Starts relaxed.
+       Gradually becomes faster.
+       Never gets ridiculously fast.
+    */
+
+    const speed =
+        5200 -
+        Math.floor(score / 2500) * 220;
+
+    return Math.max(
+        1850,
+        speed
+    );
+}
+
+function restartRiseTimer() {
+
+    if (riseTimer) {
+        clearInterval(riseTimer);
+    }
+
+    riseTimer =
+        setInterval(
+            () => {
+
+                if (
+                    !paused &&
+                    !gameOver
+                ) {
+                    addRow();
+                }
+
+            },
+            getRiseSpeed()
+        );
+}
+
+
+/*
+   Because the speed changes as score increases,
+   periodically rebuild the interval.
+*/
+
+setInterval(() => {
+
+    if (
+        !paused &&
+        !gameOver
+    ) {
+        restartRiseTimer();
+    }
+
+}, 2500);
+
+
+/* =========================================================
+   GAME OVER
+   ========================================================= */
+
+function endGame() {
+
+    if (gameOver) return;
+
+    gameOver = true;
+
+    if (riseTimer) {
+        clearInterval(riseTimer);
+        riseTimer = null;
+    }
+
+    boardShell.classList.add("warning");
+
+    statusEl.textContent =
+        "💀 THE STACK REACHED THE TOP";
+
+    statusEl.className =
+        "status warning";
+
+    finalScoreEl.textContent =
+        score.toLocaleString();
+
+    gameOverEl.classList.add("show");
+
+    flashEl.classList.add("active");
+
+    setTimeout(() => {
+        flashEl.classList.remove("active");
+    }, 200);
+
+    beep(180, .25, "sawtooth", .04);
+
+    setTimeout(() => {
+        beep(90, .4, "sawtooth", .03);
+    }, 160);
+
+    vibrate([
+        100,
+        50,
+        100,
+        50,
+        220
+    ]);
+
+    updateUI();
+}
+
+
+/* =========================================================
+   PAUSE
+   ========================================================= */
+
+function togglePause() {
+
+    if (gameOver) return;
+
+    paused = !paused;
+
+    if (paused) {
+
+        pauseButton.textContent =
+            "▶ RESUME";
+
+        statusEl.textContent =
+            "⏸️ GAME PAUSED";
+
+        statusEl.className =
+            "status normal";
+
+    } else {
+
+        pauseButton.textContent =
+            "II PAUSE";
+
+        statusEl.textContent =
+            "▶ GAME RESUMED";
+
+        statusEl.className =
+            "status good";
+
+        initAudio();
+    }
+}
+
+
+/* =========================================================
+   RESTART
+   ========================================================= */
+
+function startGame() {
+
+    if (riseTimer) {
+        clearInterval(riseTimer);
+        riseTimer = null;
+    }
+
+    if (comboTimer) {
+        clearTimeout(comboTimer);
+        comboTimer = null;
+    }
+
+    score = 0;
+    combo = 0;
+    paused = false;
+    gameOver = false;
+
+    boardShell.classList.remove("warning");
+
+    gameOverEl.classList.remove("show");
+
+    pauseButton.textContent =
+        "II PAUSE";
+
+    statusEl.textContent =
+        "Tap groups of 2 or more matching blocks!";
+
+    statusEl.className =
+        "status normal";
+
+    createEmptyGrid();
+
+    fillInitialBoard();
+
+    render();
+
+    updateUI();
+
+    restartRiseTimer();
+
+    initAudio();
+}
+
+
+/* =========================================================
+   UI
+   ========================================================= */
+
+function updateUI() {
+
+    scoreEl.textContent =
+        score.toLocaleString();
+
+    comboEl.textContent =
+        combo;
+
+    bestEl.textContent =
+        best.toLocaleString();
+}
+
+
+/* =========================================================
+   SOUND TOGGLE
+   ========================================================= */
+
+soundButton.addEventListener(
+    "click",
+    () => {
+
+        soundOn = !soundOn;
+
+        soundButton.textContent =
+            soundOn
+                ? "🔊 SOUND ON"
+                : "🔇 SOUND OFF";
+
+        if (soundOn) {
+            initAudio();
+            beep(650, .08, "sine", .025);
+        }
+    }
+);
+
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+restartButton.addEventListener(
+    "click",
+    () => {
+        vibrate(18);
+        startGame();
+    }
+);
+
+retryButton.addEventListener(
+    "click",
+    () => {
+        vibrate(20);
+        startGame();
+    }
+);
+
+pauseButton.addEventListener(
+    "click",
+    () => {
+        vibrate(12);
+        togglePause();
+    }
+);
+
+
+/* =========================================================
+   PREVENT MOBILE LONG PRESS / SCROLLING
+   ========================================================= */
+
+boardEl.addEventListener(
+    "touchstart",
+    e => {
+        e.preventDefault();
+    },
+    { passive: false }
+);
+
+
+/* =========================================================
+   START
+   ========================================================= */
+
+startGame();
+
+</script>
+
+</body>
+</html>
