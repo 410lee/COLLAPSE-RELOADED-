@@ -557,6 +557,467 @@ document
 createBoard();
 
 </script>
+<script>
 
+const COLS = 8;
+const ROWS = 12;
+
+const COLORS = [
+    "red",
+    "blue",
+    "green",
+    "yellow",
+    "purple"
+];
+
+let board = [];
+let score = 0;
+let combo = 0;
+let best = Number(localStorage.getItem("collapseBest") || 0);
+
+let paused = false;
+let gameEnded = false;
+let riseTimer = null;
+
+const boardElement = document.getElementById("board");
+const scoreElement = document.getElementById("score");
+const comboElement = document.getElementById("combo");
+const bestElement = document.getElementById("best");
+const messageElement = document.getElementById("message");
+const gameOverElement = document.getElementById("gameOver");
+const finalScoreElement = document.getElementById("finalScore");
+const pauseButton = document.getElementById("pause");
+
+bestElement.textContent = best;
+
+function randomColor() {
+    return COLORS[Math.floor(Math.random() * COLORS.length)];
+}
+
+function createBoard() {
+
+    board = [];
+
+    for (let row = 0; row < ROWS; row++) {
+
+        board[row] = [];
+
+        for (let col = 0; col < COLS; col++) {
+
+            // Start with empty space near the top.
+            if (row < 5) {
+                board[row][col] = null;
+            } else {
+                board[row][col] = randomColor();
+            }
+        }
+    }
+
+    score = 0;
+    combo = 0;
+    paused = false;
+    gameEnded = false;
+
+    pauseButton.textContent = "Ⅱ PAUSE";
+
+    gameOverElement.style.display = "none";
+
+    updateStats();
+    render();
+
+    messageElement.textContent =
+        "⬆️ The board is rising...";
+
+    startRiseTimer();
+}
+
+function render() {
+
+    boardElement.innerHTML = "";
+
+    for (let row = 0; row < ROWS; row++) {
+
+        for (let col = 0; col < COLS; col++) {
+
+            const cell = document.createElement("div");
+
+            cell.className = "cell";
+
+            const color = board[row][col];
+
+            if (color) {
+                cell.classList.add(color);
+            } else {
+                cell.classList.add("empty");
+            }
+
+            cell.addEventListener("click", () => {
+
+                if (!paused && !gameEnded) {
+                    collapse(row, col);
+                }
+
+            });
+
+            boardElement.appendChild(cell);
+        }
+    }
+}
+
+function getGroup(startRow, startCol) {
+
+    const color = board[startRow][startCol];
+
+    if (!color) return [];
+
+    const group = [];
+    const visited = new Set();
+
+    const queue = [
+        [startRow, startCol]
+    ];
+
+    while (queue.length) {
+
+        const [row, col] = queue.shift();
+
+        const key = `${row},${col}`;
+
+        if (visited.has(key)) continue;
+
+        visited.add(key);
+
+        if (
+            row < 0 ||
+            row >= ROWS ||
+            col < 0 ||
+            col >= COLS
+        ) {
+            continue;
+        }
+
+        if (board[row][col] !== color) continue;
+
+        group.push([row, col]);
+
+        queue.push([row - 1, col]);
+        queue.push([row + 1, col]);
+        queue.push([row, col - 1]);
+        queue.push([row, col + 1]);
+    }
+
+    return group;
+}
+
+function collapse(row, col) {
+
+    const group = getGroup(row, col);
+
+    if (group.length < 2) {
+
+        combo = 0;
+
+        updateStats();
+
+        messageElement.textContent =
+            "Need at least 2 matching blocks!";
+
+        return;
+    }
+
+    combo++;
+
+    const size = group.length;
+
+    const points =
+        size * size * 10 * combo;
+
+    score += points;
+
+    for (const [r, c] of group) {
+        board[r][c] = null;
+    }
+
+    applyGravity();
+
+    updateBest();
+
+    render();
+
+    messageElement.innerHTML =
+        `<span class="combo">
+        💥 ${size} BLOCKS! +${points} POINTS
+        </span>`;
+
+    updateStats();
+
+    // Check for automatic chain reaction.
+    setTimeout(checkChainReaction, 120);
+
+    setTimeout(() => {
+
+        if (combo > 0) {
+            combo = 0;
+            updateStats();
+        }
+
+    }, 1100);
+}
+
+function checkChainReaction() {
+
+    if (paused || gameEnded) return;
+
+    for (let row = 0; row < ROWS; row++) {
+
+        for (let col = 0; col < COLS; col++) {
+
+            if (!board[row][col]) continue;
+
+            const group =
+                getGroup(row, col);
+
+            if (group.length >= 2) {
+
+                combo++;
+
+                const size = group.length;
+
+                const points =
+                    size * size * 15 * combo;
+
+                score += points;
+
+                for (const [r, c] of group) {
+                    board[r][c] = null;
+                }
+
+                applyGravity();
+
+                updateBest();
+                updateStats();
+                render();
+
+                messageElement.innerHTML =
+                    `<span class="combo">
+                    🔥 CHAIN ×${combo}!
+                    +${points}
+                    </span>`;
+
+                setTimeout(checkChainReaction, 150);
+
+                return;
+            }
+        }
+    }
+}
+
+function applyGravity() {
+
+    for (let col = 0; col < COLS; col++) {
+
+        const remaining = [];
+
+        for (
+            let row = ROWS - 1;
+            row >= 0;
+            row--
+        ) {
+
+            if (board[row][col]) {
+                remaining.push(board[row][col]);
+            }
+        }
+
+        for (
+            let row = ROWS - 1;
+            row >= 0;
+            row--
+        ) {
+
+            const index =
+                ROWS - 1 - row;
+
+            board[row][col] =
+                remaining[index] || null;
+        }
+    }
+}
+
+function addNewRow() {
+
+    if (paused || gameEnded) return;
+
+    // If the danger row is occupied,
+    // the player has lost.
+    for (let col = 0; col < COLS; col++) {
+
+        if (board[0][col]) {
+
+            endGame();
+
+            return;
+        }
+    }
+
+    // Move everything upward.
+    for (
+        let row = 0;
+        row < ROWS - 1;
+        row++
+    ) {
+
+        for (let col = 0; col < COLS; col++) {
+
+            board[row][col] =
+                board[row + 1][col];
+        }
+    }
+
+    // Add a new row at the bottom.
+    for (let col = 0; col < COLS; col++) {
+
+        board[ROWS - 1][col] =
+            randomColor();
+    }
+
+    combo = 0;
+
+    render();
+    updateStats();
+
+    messageElement.textContent =
+        "⬆️ NEW ROW!";
+}
+
+function getRiseDelay() {
+
+    // Start slow.
+    // Gradually become faster.
+    const speedBonus =
+        Math.floor(score / 1000);
+
+    const delay =
+        4500 - (speedBonus * 300);
+
+    return Math.max(1400, delay);
+}
+
+function startRiseTimer() {
+
+    clearTimeout(riseTimer);
+
+    if (gameEnded) return;
+
+    riseTimer = setTimeout(() => {
+
+        if (!paused && !gameEnded) {
+
+            addNewRow();
+        }
+
+        startRiseTimer();
+
+    }, getRiseDelay());
+}
+
+function togglePause() {
+
+    if (gameEnded) return;
+
+    paused = !paused;
+
+    if (paused) {
+
+        pauseButton.textContent =
+            "▶ RESUME";
+
+        messageElement.textContent =
+            "⏸️ GAME PAUSED";
+
+    } else {
+
+        pauseButton.textContent =
+            "Ⅱ PAUSE";
+
+        messageElement.textContent =
+            "⬆️ KEEP GOING!";
+
+        startRiseTimer();
+    }
+}
+
+function endGame() {
+
+    gameEnded = true;
+
+    clearTimeout(riseTimer);
+
+    updateBest();
+
+    finalScoreElement.textContent =
+        score;
+
+    gameOverElement.style.display =
+        "flex";
+
+    messageElement.textContent =
+        "☠️ THE BLOCKS REACHED THE TOP!";
+}
+
+function updateStats() {
+
+    scoreElement.textContent =
+        score;
+
+    comboElement.textContent =
+        combo;
+
+    bestElement.textContent =
+        best;
+}
+
+function updateBest() {
+
+    if (score > best) {
+
+        best = score;
+
+        localStorage.setItem(
+            "collapseBest",
+            best
+        );
+    }
+}
+
+function restart() {
+
+    clearTimeout(riseTimer);
+
+    createBoard();
+}
+
+document
+    .getElementById("restart")
+    .addEventListener(
+        "click",
+        restart
+    );
+
+pauseButton.addEventListener(
+    "click",
+    togglePause
+);
+
+document
+    .getElementById("playAgain")
+    .addEventListener(
+        "click",
+        restart
+    );
+
+createBoard();
+
+</script>
 </body>
 </html>
